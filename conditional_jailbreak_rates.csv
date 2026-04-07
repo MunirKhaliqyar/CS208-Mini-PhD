@@ -1,0 +1,5 @@
+condition,three_turn_present_jailbreak_rate,three_turn_past_jailbreak_rate
+Direct single-turn safe,0.2913752913752914,
+Direct single-turn jailbreak,0.620253164556962,
+Reframed single-turn safe,,0.625
+Reframed single-turn jailbreak,,0.831081081081081

@@ -1,0 +1,551 @@
+===== PAGE 1 =====
+CSF Tau–Amyloid Imbalance Emerges Earliest in Preclinical Alzheimer’s Disease: A 
+Multimodal Timing Analysis in ADNI 
+Russell Butler* 
+*Bishops University, Department of Computer Science, Sherbrooke, Quebec J1M 1Z7 
+Abstract 
+Background 
+Early detection of Alzheimer's disease involves at least two related transition stages: movement from 
+normal cognition into impairment and progression from mild cognitive impairment (MCI) to Alzheimer's 
+disease (AD) dementia. Invasive markers such as cerebrospinal fluid (CSF) assays and positron emission 
+tomography (PET) may capture earlier biology, while non-invasive markers such as plasma assays, 
+magnetic resonance imaging (MRI), and cognition may be easier to scale. 
+Objective 
+To characterize biomarker timing for the earliest clinical transition detectable in this cohort, compare 
+predictive performance across baseline CN to MCI/AD and baseline MCI to AD conversion tasks, and test 
+long-horizon prediction of eventual AD among subjects starting from normal cognition. 
+Methods 
+We built a reproducible analysis pipeline using ADNI diagnosis, demographics, cognition, genotype, MRI, 
+amyloid PET, tau PET, CSF , and plasma tables. The base longitudinal cohort contained 3,788 subjects 
+and 15,879 visits. Conversion status was assigned from longitudinal diagnosis trajectories. The 
+longitudinal timing analysis focused on 1,601 baseline cognitively normal participants, including 194 
+progressors and 1,407 stable controls, because direct CN to AD events were uncommon. For each 
+biomarker, yearly pre-conversion bins were compared with stable control follow-up bins after collapsing 
+repeated observations within each subject-year bin. We then evaluated baseline prediction within 4 years 
+for both CN to MCI/AD and MCI to AD, compared three 7-year baseline models in both baseline CN and 
+baseline MCI participants, and performed a third long-horizon analysis restricted to baseline CN subjects 
+who later reached AD either directly or through an intermediate MCI stage. 
+Results 
+After subject-level binning, the earliest detectable divergence in the CN-based timing analysis was the 
+CSF pTau/A beta 42 ratio at 7 years before conversion, followed by CSF A beta 42 at 7 years, APOE4 count 
+at 6 years, and MRI hippocampal volume, amyloid PET measures, and plasma GFAP at 5 years. In the 
+FDR-corrected summary, CSF A beta 42 remained significant at 7 years, while the CSF pTau/A beta 42 
+ratio remained significant at 4 years. For 4-year prediction, random forest models reached AUC 0.846 for 
+baseline cognitively normal participants progressing to MCI or AD and AUC 0.893 for baseline MCI 
+participants progressing to AD. For 7-year prediction, the all baseline numeric model performed best in 
+both stages, reaching AUC 0.885 in baseline CN participants and AUC 0.911 in baseline MCI participants. 
+In the long-horizon baseline CN to AD analysis, 46 subjects eventually reached AD and 39 did so within 
+12 years; the strongest biomarker panel achieved AUC 0.926 and the all baseline numeric model 
+achieved AUC 0.940. 
+
+===== PAGE 2 =====
+Conclusions 
+In this ADNI analysis, invasive markers retained the earliest temporal signal for transition out of normal 
+cognition, with CSF abnormalities preceding most non-invasive measures. Across both CN and MCI 
+baseline states, multimodal prediction performed well, with particularly strong performance for MCI to 
+AD progression. A separate long-horizon baseline CN to AD analysis suggested that blood and CSF 
+biomarkers can carry substantial signal even 10 to 12 years before first AD diagnosis, although the event 
+count was small. The overall pattern supports a staged framework in which invasive markers define the 
+earliest biological window, while broader multimodal models support practical risk stratification across 
+later clinical transition stages. 
+Introduction 
+Alzheimer's disease evolves over many years before a formal diagnosis changes, and several influential 
+biomarker models have argued that the underlying pathophysiological process begins long before overt 
+clinical dementia [1-7]. A useful early-detection framework therefore has to address at least two distinct 
+but connected transition problems: which biomarkers change first before a cognitively normal person 
+becomes clinically impaired, and which markers best predict progression once impairment is already 
+present. 
+These are related but not identical questions. A marker can be biologically early yet less useful for short-
+horizon prediction, while a later marker can still be clinically valuable if it is easier to deploy and strongly 
+associated with near-term progression. This distinction is especially relevant when comparing invasive 
+and non-invasive modalities [1-3,6-8]. CSF assays and PET imaging provide relatively direct access to 
+molecular pathology but require lumbar puncture or advanced imaging infrastructure. Plasma 
+biomarkers, MRI, and cognitive testing are less invasive and easier to scale, but they may reflect 
+downstream pathology or clinical expression rather than the earliest disease state [8-20]. 
+Recent studies have shown that plasma p-tau217, plasma Aβ42/Aβ40, and plasma GFAP can identify 
+preclinical AD-related change and forecast future cognitive decline, in some cases over long horizons, 
+while multimodal models that combine molecular, imaging, genetic, and cognitive features have 
+improved prediction of MCI-to-AD progression [8-25]. At the same time, the relative ranking of blood, CSF , 
+and PET measures remains unsettled. Several recent head-to-head studies suggest that plasma p-
+tau217 or combined blood-marker strategies can approach CSF- or PET-level performance for selected 
+outcomes, whereas other studies continue to show stronger performance for amyloid PET or highlight 
+marked cohort dependence [26-33]. 
+ADNI offers a strong setting for this question because it includes repeated diagnoses, cognitive testing, 
+MRI, PET, CSF , plasma, and genotype data collected over years. The challenge is that these data are 
+distributed across many tables with heterogeneous visit timing and varying coverage. We addressed this 
+by building a constrained, reproducible pipeline focused on a defined set of core files and representative 
+biomarkers. 
+The paper addresses four related aims: 
+1. Identify the earliest detectable biomarker changes preceding the first clinical transition from 
+normal cognition to MCI or AD. 
+
+===== PAGE 3 =====
+2. Evaluate baseline prediction for both CN to MCI/AD and MCI to AD conversion. 
+3. Compare how invasive and non-invasive markers contribute across early transition timing and 
+later-stage progression prediction. 
+4. Test whether baseline CN subjects who ultimately reach AD can be predicted 10 to 12 years in 
+advance using the same multimodal modeling framework. 
+Methods 
+Study design and data sources 
+The analysis used ADNI tables that had already been converted to CSV and indexed in the project dataset 
+map. Core clinical tables included diagnosis, demographics, cognition, and APOE genotype. Biomarker 
+tables included MRI, amyloid PET, tau PET, CSF , and plasma. A separate extended prediction analysis 
+added DWI, vital signs, and composite memory and executive function summaries. 
+The core longitudinal tables were: 
+DXSUM.csv for diagnosis 
+PTDEMOG.csv for demographics 
+CDR.csv, MMSE.csv, and MOCA.csv for cognition 
+APOERES.csv for genotype 
+The biomarker tables were: 
+UCSFFSX7.csv for structural MRI 
+UCBERKELEY_AMY_6MM.csv for amyloid PET 
+UCBERKELEY_TAU_6MM.csv for tau PET 
+UPENNBIOMK_ROCHE_ELECSYS.csv for CSF markers 
+UPENN_PLASMA_FUJIREBIO_QUANTERIX.csv for plasma markers 
+The extended 7-year comparison additionally used: 
+DTIROI_ROBUSTMEAN.csv 
+VITALS.csv 
+UWNPSYCHSUM.csv 
+NEUROBAT.csv 
+Cohort construction 
+Visit records were harmonized by subject identifier and visit key. Visit keys were built from VISCODE2 
+when available, otherwise VISCODE, and otherwise a standardized date key. Within each subject-visit 
+combination, duplicates were collapsed conservatively to a single row. The resulting base longitudinal 
+cohort contained 3,788 subjects and 15,879 visits. 
+Diagnosis trajectories were sorted chronologically for each subject. Baseline diagnosis was the first non-
+missing diagnosis. Conversion was defined as the first transition from cognitively normal to MCI or AD, or 
+
+===== PAGE 4 =====
+from MCI to AD. Subjects without a qualifying later transition were treated as stable within their baseline 
+group. 
+The resulting conversion table classified 3,777 subjects with usable longitudinal diagnosis information: 
+1,601 baseline cognitively normal 
+1,607 baseline MCI 
+569 baseline AD 
+1,407 stable cognitively normal 
+185 cognitively normal to MCI conversions 
+9 cognitively normal to AD conversions 
+404 MCI to AD conversions 
+Biomarker definitions 
+Representative biomarkers were selected to cover the main biological and clinical domains. 
+Invasive markers: 
+Amyloid PET SUVR 
+Amyloid PET centiloid 
+Tau PET meta-temporal SUVR 
+CSF A beta 42 
+CSF total tau 
+CSF pTau 
+CSF pTau/A beta 42 ratio 
+Non-invasive markers: 
+MRI normalized hippocampal volume 
+Plasma pTau217 
+Plasma A beta 42/A beta 40 
+Plasma neurofilament light 
+Plasma GFAP 
+APOE4 count 
+MOCA 
+MMSE 
+CDR-SB 
+For the extended prediction comparison, non-invasive features also included DWI variables, vital signs, 
+and composite neuropsychological measures such as ADNI memory and executive function scores. 
+Alignment and missing data 
+Modalities were merged into the clinical cohort using exact visit keys first and nearest-date matching 
+within 365 days second. This fallback was necessary because biomarker acquisitions were not 
+synchronized across modalities. Coverage was uneven. In the analysis-ready dataset, missingness was 
+
+===== PAGE 5 =====
+approximately 18.0 percent for MRI hippocampal volume, 45.4 percent for amyloid PET SUVR, 58.9 
+percent for CSF A beta 42, 77.3 percent for tau PET, and 80.4 percent for plasma pTau217. 
+Longitudinal timing analysis 
+The longitudinal timing analysis was performed for baseline cognitively normal progressors versus stable 
+cognitively normal controls. Time zero was defined as the first conversion diagnosis. Each visit was 
+aligned to years before conversion, and stable cognitively normal participants were aligned by follow-up 
+time from baseline. To avoid inflating significance from repeated visits, repeated measurements within 
+each subject-year bin were collapsed to a subject-level median before testing. 
+For each biomarker and each yearly bin from 0 to 8 years before conversion, progressors were compared 
+with stable controls using Welch's t test. A biomarker was considered detectably divergent when both 
+conditions were met: 
+p < 0.05 
+absolute Cohen's d >= 0.3 
+We also summarized FDR-corrected significant bins to distinguish nominal earliest divergence from the 
+more conservative multiplicity-adjusted result. 
+Baseline prediction analyses 
+Two 4-year baseline prediction tasks were evaluated: 
+cognitively normal to MCI or AD within 4 years 
+MCI to AD within 4 years 
+Models included logistic regression, regularized logistic regression, random forest, and gradient boosting. 
+Performance was assessed with cross-validated AUC. 
+We then performed separate 7-year prediction comparisons in baseline cognitively normal and baseline 
+MCI participants. Three random forest feature groups were evaluated in each stage: 
+1. strongest biomarkers 
+2. MRI plus DWI plus memory plus vital signs 
+3. all baseline numeric predictors 
+These models used 5-fold cross-validated AUC. Feature importance was estimated with cross-validated 
+permutation importance on held-out folds rather than in-sample importance. 
+Finally, we performed a third long-horizon analysis restricted to baseline CN subjects who eventually 
+reached AD, either through direct CN to AD conversion or via an intermediate MCI stage. The primary 
+endpoint was first AD diagnosis within 12 years of baseline, chosen because 39 baseline CN subjects 
+met that threshold and 46 eventually reached AD at any observed horizon. 
+Results 
+Cohort assembly and clinical transition structure 
+
+===== PAGE 6 =====
+The assembled cohort supported both longitudinal timing analysis and baseline prediction. Among the 
+1,601 baseline cognitively normal participants, 194 eventually progressed and 1,407 remained stable. 
+Most progression from normal cognition was to MCI rather than directly to AD, so the timing analysis 
+should be interpreted primarily as preclinical to prodromal transition timing rather than pure preclinical 
+to dementia timing. 
+Among baseline MCI participants, 404 progressed to AD and 1,203 remained stable MCI during observed 
+follow-up. This larger event count made the MCI to AD prediction task less sparse than the cognitively 
+normal to MCI or AD task and makes the paper more naturally a two-stage transition study than a single-
+stage early-detection study. 
+Longitudinal timing of markers before transition out of normal cognition 
+The CSF pTau/A beta 42 ratio was the earliest marker to meet the nominal divergence threshold, 
+appearing 7 years before conversion, with CSF A beta 42 also diverging at 7 years. APOE4 count reached 
+divergence at 6 years. MRI hippocampal atrophy, amyloid PET SUVR, amyloid PET centiloid, and plasma 
+GFAP all showed divergence at 5 years. Tau PET and plasma pTau217 appeared at 4 years, while CDR-SB 
+emerged at 3 years. 
+This ordering suggests a layered sequence that is broadly consistent with prior biomarker-cascade 
+models but also with more recent work emphasizing early CSF tau-amyloid imbalance, early CSF amyloid 
+change, and later emergence of more scalable plasma and structural markers [1-7,15-19]. The earliest 
+detectable changes in this dataset were invasive molecular markers, especially CSF tau-amyloid 
+imbalance. A second phase included structural neurodegeneration and selected non-invasive blood-
+based or imaging-derived markers. Cognitive decline became visible later, closer to overt diagnostic 
+transition. 
+The top portion of the nominal divergence ranking was: 
+1. CSF pTau/A beta 42 ratio at 7 years 
+2. CSF A beta 42 at 7 years 
+3. APOE4 count at 6 years 
+4. MRI normalized hippocampal volume at 5 years 
+5. Amyloid PET SUVR at 5 years 
+6. Amyloid PET centiloid at 5 years 
+7. Plasma GFAP at 5 years 
+8. MOCA at 4 years 
+9. Tau PET meta-temporal SUVR at 4 years 
+10. Plasma pTau217 at 4 years 
+In the FDR-based summary, CSF A beta 42 remained at 7 years, while CSF pTau/A beta 42 ratio, plasma 
+pTau217, and MOCA remained significant at 4 years. This more conservative view still supports an early 
+
+===== PAGE 7 =====
+invasive signal, but it should temper any overly rigid claims about the exact top ordering. Corresponding 
+CN and MCI trajectory panels and divergence timelines are included in the figure set for visual stage 
+comparison. 
+Baseline prediction across both clinical transition stages 
+Short-horizon prediction told a somewhat different story from longitudinal timing. For baseline 
+cognitively normal participants, the best 4-year model was a random forest with AUC 0.846 for 
+progression to MCI or AD. For baseline MCI participants, the best model was again random forest with 
+AUC 0.893 for progression to AD. 
+These 4-year results imply that later-stage clinical and neurodegenerative signals can be highly predictive 
+over shorter horizons even if they are not the earliest to emerge biologically, a distinction also 
+emphasized in prior multimodal prediction studies [20-25]. This is important because the clinically useful 
+marker is not always the earliest marker. In practice, a marker that changes somewhat later may still be 
+preferable if it improves prediction in the time window that matters for intervention or trial enrollment. 
+Single-feature results also differed by stage. In baseline CN participants, MOCA, normalized 
+hippocampal volume, and plasma neurofilament light were among the strongest single predictors. In 
+baseline MCI participants, CDR-SB and normalized hippocampal volume were particularly strong, 
+consistent with more overt clinical and neurodegenerative expression later in disease progression. 
+Seven-year baseline prediction in baseline CN participants 
+The 7-year baseline comparison focused on baseline cognitively normal participants and directly 
+contrasted invasive-heavy and non-invasive-heavy feature sets. There were 1,601 baseline cognitively 
+normal participants and 146 conversion events within 7 years. 
+The strongest biomarker panel achieved AUC 0.836. The MRI plus DWI plus memory plus vital-sign panel 
+achieved AUC 0.799. The broadest model, using all baseline numeric predictors, achieved AUC 0.885. 
+The strongest biomarker model was driven mainly by plasma pTau217, plasma A beta 42/A beta 40, 
+plasma GFAP , plasma neurofilament light, and tau PET. The MRI plus DWI plus memory plus vitals model 
+was led by ADNI memory score and normalized hippocampal volume. In the all-baseline model, the top 
+contributors were plasma pTau217, ADNI memory, MOCA, plasma GFAP , hippocampal volume, plasma A 
+beta 42/A beta 40, and executive function measures. 
+These results sharpen the invasive versus non-invasive interpretation. Purely or predominantly non-
+invasive panels remained informative and came close to the strongest biomarker panel, but the best 
+overall prediction came from the broad integrated baseline model rather than from a narrower invasive-
+only or non-invasive-only subset. 
+Seven-year baseline prediction in baseline MCI participants 
+The parallel 7-year comparison in baseline MCI participants used the same three feature groups and 
+included 1,607 subjects with 370 conversions to AD within 7 years. 
+
+===== PAGE 8 =====
+The strongest biomarker panel achieved AUC 0.802. The MRI plus DWI plus memory plus vital-sign panel 
+achieved AUC 0.872. The broadest model, using all baseline numeric predictors, achieved AUC 0.911. 
+The strongest biomarker model in baseline MCI was led by APOE4 count and the CSF pTau/A beta 42 
+ratio, with smaller contributions from plasma pTau217 and CSF tau markers. The MRI plus DWI plus 
+memory plus vitals model was dominated by ADNI memory, delayed recall measures, and hippocampal 
+volume. In the all-baseline model, the strongest contributors were ADNI memory, hippocampal volume, 
+CSF pTau/A beta 42 ratio, CDR-SB, language and executive composites, and delayed recall. 
+These MCI-stage results differ from the CN-stage pattern. In baseline MCI, the MRI plus DWI plus 
+memory plus vitals panel clearly outperformed the strongest biomarker subset, suggesting that once 
+prodromal impairment is present, structural and cognitive measures carry more of the near- to mid-term 
+prognostic signal. 
+Long-horizon baseline prediction for eventual CN to AD 
+The third analysis focused only on baseline CN subjects who eventually reached AD, either directly or 
+after first passing through MCI. Among 1,601 baseline CN subjects, 46 reached AD at any observed 
+horizon and 39 did so within 12 years, which provided the longest workable horizon in this dataset for a 
+direct CN to AD endpoint. 
+In this 12-year CN to AD analysis, the strongest biomarker panel achieved AUC 0.926. The MRI plus DWI 
+plus memory plus vital-sign panel achieved AUC 0.738. The broadest model, using all baseline numeric 
+predictors, achieved AUC 0.940. 
+The long-horizon strongest biomarker model was driven mainly by plasma neurofilament light, plasma 
+pTau217, the CSF pTau/A beta 42 ratio, CSF tau, plasma A beta 42/A beta 40, and tau PET. In the all-
+baseline model, the top contributors were normalized hippocampal volume, plasma pTau217, plasma 
+neurofilament light, MOCA, CSF pTau/A beta 42 ratio, hippocampal volume, tau PET, and plasma A beta 
+42/A beta 40. 
+This third analysis suggests that the long-range signal for eventual AD among baseline CN subjects is not 
+dominated by cognition alone. Instead, it appears to depend heavily on a combination of structural 
+neurodegeneration and invasive or blood-based molecular markers. However, the event count is small 
+enough that this result should be interpreted as promising rather than definitive. 
+Interpreting invasive versus non-invasive performance across stages 
+Taken together, the timing and prediction results support a two-part story. 
+First, invasive markers appear earlier in the transition out of normal cognition. CSF measures reached the 
+earliest detectable divergence, and PET also separated future converters from stable controls before 
+most non-invasive measures. This supports the view that molecular pathology is detectable before 
+downstream structural injury and before clear clinical decline, in line with CSF-first and early-cascade 
+studies, while also refining the exact ordering within that early window [1-7,15,16]. 
+Second, non-invasive markers become increasingly competitive as the time horizon shortens or as 
+disease stage advances. MRI hippocampal atrophy, plasma GFAP , plasma pTau217, memory composites, 
+
+===== PAGE 9 =====
+and cognition all contributed materially to prediction. In baseline MCI, the non-invasive-heavy MRI plus 
+DWI plus memory plus vitals panel outperformed the strongest biomarker subset. In the separate long-
+horizon CN to AD analysis, the strongest biomarker panel remained much stronger than the MRI plus DWI 
+plus memory plus vitals subset, while the broad integrated model performed best overall. In other words, 
+non-invasive tools may not define the earliest biological onset, but they can still carry substantial 
+practical value when combined with molecular markers, which is consistent with recent blood-based 
+and multimodal studies but should be interpreted alongside reports showing that blood-marker 
+performance can vary substantially by cohort, outcome, and comparator modality [9-33]. 
+Discussion 
+This study is best understood as a two-stage clinical transition analysis. The first stage addresses early 
+deviation from normal cognition, where the present data favor invasive molecular markers, especially 
+CSF tau-amyloid imbalance. The corrected subject-level timing analysis placed the CSF pTau/A beta 42 
+ratio and CSF A beta 42 at the leading edge of detectable divergence, ahead of most imaging, plasma, 
+and cognitive measures. This general pattern is consistent with classic biomarker cascade models and 
+especially with work arguing that CSF amyloid abnormalities can be detected before amyloid PET and 
+before overt neurodegeneration [1-7,15,16]. 
+That result matters because it shifts the narrative away from a simple amyloid-PET-first story. Amyloid 
+PET remained early, but after correcting the repeated-measures issue it no longer occupied the singular 
+top position. Instead, the earliest nominal signal came from a CSF composite reflecting both amyloid and 
+tau biology, and the FDR summary still supported CSF A beta 42 as the most robust earliest signal. At the 
+same time, recent blood-based studies caution against overstating a strict invasive-first hierarchy, 
+because plasma p-tau217 and combined plasma-marker strategies can sometimes approach CSF or PET 
+performance for pathology detection or prediction in selected settings [6,15,16,26,29,30,32]. 
+The second stage addresses progression from MCI to AD, where the present work is strongest on 
+prediction rather than longitudinal timing. The higher event count in MCI made the 4-year prediction task 
+more stable, and the resulting AUC of 0.893 suggests that multimodal baseline information is already 
+highly informative once subjects have entered the prodromal stage. This interpretation fits recent work 
+showing that stage-aware multimodal models, anatomical staging frameworks, and integrated genetics-
+plus-imaging-plus-cognition approaches can substantially improve prediction of MCI conversion [20-25]. 
+The non-invasive findings remain important. MRI hippocampal atrophy and plasma GFAP reached 
+divergence at 5 years before transition out of normal cognition, and plasma pTau217 emerged at 4 years. 
+These are not trivial delays. A 4-year to 5-year lead time is still highly relevant for many screening and trial 
+applications, especially given the feasibility advantages of blood tests and MRI compared with lumbar 
+puncture or PET. The implication is not that non-invasive markers are inadequate, but that they may 
+represent a later and more scalable layer of the detection stack. That interpretation is broadly compatible 
+with recent plasma biomarker studies emphasizing early but not necessarily earliest change in plasma p-
+tau217, GFAP , and plasma Aβ42/Aβ40, and with longer-horizon studies showing that blood-based 
+markers can remain clinically informative even when they do not define the first detectable abnormality 
+[8-20]. 
+
+===== PAGE 10 =====
+The prediction analyses reinforce that distinction. For near-term 4-year prediction, multivariable models 
+performed well in both baseline CN and baseline MCI groups, with especially strong performance in the 
+MCI to AD task. For the 7-year comparisons, the broad multimodal baseline model performed best in 
+both baseline CN and baseline MCI cohorts, while the intermediate MRI plus DWI plus memory plus 
+vitals panel was notably stronger in baseline MCI than in baseline CN. For the 12-year CN to AD analysis, 
+the strongest biomarker panel was already highly discriminative, and the broad multimodal model 
+performed best overall. This suggests that once multiple domains are integrated, practical prediction 
+depends less on a single earliest modality and more on combining complementary markers across 
+molecular, structural, and cognitive levels, a conclusion that is well aligned with recent multimodal 
+prediction literature [20-25] but also consistent with challenge studies showing that blood markers, 
+imaging, and CSF each gain or lose relative advantage depending on the endpoint and cohort under study 
+[26-33]. 
+A plausible clinical translation is a tiered workflow. A first-pass scalable screen could rely on non-
+invasive markers such as plasma assays, MRI, and cognitive composites. Individuals with elevated risk 
+could then be escalated to more invasive confirmatory assessment with CSF or PET. The current results 
+are consistent with that model because invasive modalities appeared earliest, while non-invasive 
+modalities remained sufficiently informative to support broad risk stratification across later clinical 
+transition stages. This tiered interpretation is also compatible with recent literature on plasma 
+prescreening, multimodal enrichment, and pragmatic trial-selection workflows [6,20,26,29,30,32,33]. 
+Limitations 
+Several limitations are important. 
+First, modality coverage was highly uneven. MRI was relatively dense, while tau PET, CSF , and plasma 
+were much sparser. Sparse coverage can change which markers appear earliest because a biomarker 
+cannot diverge in a time window where very few samples exist. 
+Second, modality alignment relied on exact visit-key matching with nearest-date fallback within 365 
+days. This was retained because tighter matching would have removed too much data. The resulting 
+paper therefore reflects the best practical analysis under the available data structure, but the temporal 
+ordering should still be interpreted with caution. 
+Third, most baseline cognitively normal progressors converted to MCI rather than directly to AD. The 
+longitudinal timing results therefore mainly represent the biology of transition from normal cognition into 
+prodromal impairment rather than direct progression to dementia. 
+Fourth, the paper now emphasizes three related analyses, but the longitudinal timing analysis itself was 
+only run for the CN-based transition. The MCI stage and the long-horizon CN to AD stage are represented 
+here through prediction rather than separate biomarker timing analyses. 
+Fifth, the long-horizon CN to AD analysis was based on only 39 events within 12 years and 46 eventual AD 
+events overall. Those estimates are therefore especially vulnerable to optimism and sampling instability. 
+Sixth, the work is retrospective and limited to ADNI. The resulting timelines and model performance 
+estimates should be viewed as internally valid study outputs rather than ready-made clinical thresholds. 
+
+===== PAGE 11 =====
+Conclusion 
+The final integrated analysis now supports a three-part early-detection story. For the earliest transition 
+out of normal cognition, the earliest detectable deviations were invasive molecular markers, led 
+nominally by the CSF pTau/A beta 42 ratio and robustly by CSF A beta 42 in the FDR summary. For later 
+clinical progression, especially baseline MCI to AD, multimodal baseline prediction was strong. For the 
+separate long-horizon baseline CN to AD endpoint, a small but usable set of events suggested that 
+plasma and CSF markers plus structural MRI can support meaningful prediction more than a decade 
+before first AD diagnosis. 
+The practical implication is not that one modality replaces the others. Instead, the data support a layered 
+strategy: invasive biomarkers for the earliest biological detection, non-invasive biomarkers for scalable 
+longitudinal screening, integrated multimodal models for strong stage-specific prediction, and a 
+cautiously interpreted long-horizon CN to AD signal that warrants external validation. 
+References 
+1. Jack CR Jr, Knopman DS, Jagust WJ, Shaw LM, Aisen PS, Weiner MW, et al. Hypothetical model of 
+dynamic biomarkers of the Alzheimer's pathological cascade. Lancet Neurol. 2010 Jan;9(1):119-
+128. doi:10.1016/S1474-4422(09)70299-6. 
+2. Jack CR Jr, Knopman DS, Jagust WJ, Petersen RC, Weiner MW, Aisen PS, et al. Tracking 
+pathophysiological processes in Alzheimer's disease: an updated hypothetical model of dynamic 
+biomarkers. Lancet Neurol. 2013 Feb;12(2):207-216. doi:10.1016/S1474-4422(12)70291-0. 
+3. Jack CR Jr, Holtzman DM. Biomarker modeling of Alzheimer's disease. Neuron. 2013 Dec 
+18;80(6):1347-1358. doi:10.1016/j.neuron.2013.12.003. 
+4. Bateman RJ, Xiong C, Benzinger TLS, Fagan AM, Goate A, Fox NC, et al. Clinical and biomarker 
+changes in dominantly inherited Alzheimer's disease. N Engl J Med. 2012 Aug 30;367(9):795-804. 
+doi:10.1056/NEJMoa1202753. 
+5. Villemagne VL, Burnham S, Bourgeat P , Brown B, Ellis KA, Salvado O, et al. Amyloid β deposition, 
+neurodegeneration, and cognitive decline in sporadic Alzheimer's disease: a prospective cohort 
+study. Lancet Neurol. 2013 Apr;12(4):357-367. doi:10.1016/S1474-4422(13)70044-9. 
+6. Palmqvist S, Mattsson N, Hansson O; Alzheimer's Disease Neuroimaging Initiative. Cerebrospinal 
+fluid analysis detects cerebral amyloid-β accumulation earlier than positron emission 
+tomography. Brain. 2016 Apr;139(Pt 4):1226-1236. doi:10.1093/brain/aww015. 
+7. Jack CR Jr, Bennett DA, Blennow K, Carrillo MC, Dunn B, Haeberlein SB, et al. NIA-AA Research 
+Framework: Toward a biological definition of Alzheimer's disease. Alzheimers Dement. 2018 
+Apr;14(4):535-562. doi:10.1016/j.jalz.2018.02.018. 
+8. Palmqvist S, Janelidze S, Quiroz YT, Zetterberg H, Lopera F , Stomrud E, et al. Discriminative 
+Accuracy of Plasma Phospho-tau217 for Alzheimer Disease vs Other Neurodegenerative 
+Disorders. JAMA. 2020 Aug 25;324(8):772-781. doi:10.1001/jama.2020.12134. 
+
+===== PAGE 12 =====
+9. Mattsson-Carlgren N, Janelidze S, Palmqvist S, Cullen N, Svenningsson AL, Strandberg O, et al. 
+Longitudinal plasma p-tau217 is increased in early stages of Alzheimer's disease. Brain. 2020 Dec 
+5;143(11):3234-3241. doi:10.1093/brain/awaa286. 
+10. Mattsson-Carlgren N, Salvadó G, Ashton NJ, Tideman P , Stomrud E, Zetterberg H, et al. Prediction 
+of longitudinal cognitive decline in preclinical Alzheimer disease using plasma biomarkers. JAMA 
+Neurol. 2023 Apr 1;80(4):360-369. doi:10.1001/jamaneurol.2022.5272. 
+11. Jonaitis EM, Janelidze S, Cody KA, Langhough R, Du L, Chin NA, et al. Plasma phosphorylated tau 
+217 in preclinical Alzheimer's disease. Brain Commun. 2023 Mar 6;5(2):fcad057. 
+doi:10.1093/braincomms/fcad057. 
+12. Yakoub Y , Gonzalez-Ortiz F , Ashton NJ, Déry C, Strikwerda-Brown C, St-Onge F , et al. Plasma p-
+tau217 identifies cognitively normal older adults who will develop cognitive impairment in a 10-
+year window. Alzheimers Dement. 2025 Feb;21(2):e14537. doi:10.1002/alz.14537. 
+13. Soldan A, Pettigrew C, Wang J, Albert MS, Blennow K, Bittner T, et al. Blood-Based Biomarkers and 
+Risk of Onset of Mild Cognitive Impairment Over the Short and Long Term. Neurology. 2025 Jan 
+28;104(2):e210225. doi:10.1212/WNL.0000000000210225. 
+14. Trelle AN, Young CB, Vossler H, Ramos Benitez J, Cody KA, Mendiola JH, et al. Plasma Aβ42/Aβ40 
+is sensitive to early cerebral amyloid accumulation and predicts risk of cognitive decline across 
+the Alzheimer's disease spectrum. Alzheimers Dement. 2025 Feb;21(2):e14442. 
+doi:10.1002/alz.14442. 
+15. Cacciaglia R, Shekari M, Salvadó G, Milà-Alomà M, Falcon C, Sánchez-Benavides G, et al. The CSF 
+p-tau/β-amyloid 42 ratio correlates with brain structure and fibrillary β-amyloid deposition in 
+cognitively unimpaired individuals at the earliest stages of pre-clinical Alzheimer's disease. Brain 
+Commun. 2024 Dec 13;7(1):fcae451. doi:10.1093/braincomms/fcae451. 
+16. de Leeuw DM, Trieu C, Vromen EM, Blujdea ER, Verberk IMW, Duits FH, et al. Cerebrospinal Fluid 
+Amyloid and Tau Biomarker Changes Across the Alzheimer Disease Clinical Spectrum. JAMA Netw 
+Open. 2025 Jul 1;8(7):e2519919. doi:10.1001/jamanetworkopen.2025.19919. 
+17. Pelkmans W, Shekari M, Brugulat-Serrat A, Sánchez-Benavides G, Minguillón C, Fauria K, et al. 
+Astrocyte biomarkers GFAP and YKL-40 mediate early Alzheimer's disease progression. 
+Alzheimers Dement. 2024 Jan;20(1):483-493. doi:10.1002/alz.13450. 
+18. Guo Y , Shen XN, Wang HF , Chen SD, Zhang YR, Chen SF , et al. The dynamics of plasma biomarkers 
+across the Alzheimer's continuum. Alzheimers Res Ther. 2023 Feb 8;15(1):31. 
+doi:10.1186/s13195-023-01174-0. 
+19. Pan FF , Huang L, Wang Y , Huang Q, Guan YH, Li YH, et al. Plasma P-tau217, GFAP , and NfL as 
+biomarkers for Alzheimer's disease: role in disease stratification, pathological progression, and 
+cognitive decline. Alzheimers Dement. 2025 Dec;21(12):e70987. doi:10.1002/alz.70987. 
+
+===== PAGE 13 =====
+20. Palmqvist S, Tideman P , Cullen N, Zetterberg H, Blennow K, Dage JL, et al. Prediction of future 
+Alzheimer's disease dementia using plasma phospho-tau combined with other accessible 
+measures. Nat Med. 2021 Jun;27(6):1034-1042. doi:10.1038/s41591-021-01348-z. 
+21. Reas ET, Shadrin A, Frei O, Motazedi E, McEvoy L, Bahrami S, et al. Improved multimodal 
+prediction of progression from MCI to Alzheimer's disease combining genetics with quantitative 
+brain MRI and cognitive measures. Alzheimers Dement. 2023 Nov;19(11):5151-5158. 
+doi:10.1002/alz.13112. 
+22. Cai J, Hu W, Ma J, Si A, Chen S, Gong L, et al. Explainable Machine Learning with Pairwise 
+Interactions for Predicting Conversion from Mild Cognitive Impairment to Alzheimer's Disease 
+Utilizing Multi-Modalities Data. Brain Sci. 2023 Oct 31;13(11):1535. 
+doi:10.3390/brainsci13111535. 
+23. Ding H, Wang B, Hamel AP , Melkonyan M, Ang TFA, Au R, et al. Prediction of Progression from Mild 
+Cognitive Impairment to Alzheimer's disease with Longitudinal and Multimodal Data. Front 
+Dement. 2023;2:1271680. doi:10.3389/frdem.2023.1271680. 
+24. Tandon R, Mei Y , Lah JJ, Mitchell CS. Comprehensive Anatomical Staging Predicts Clinical 
+Progression in Mild Cognitive Impairment: A Data-Driven Approach. Int J Mol Sci. 2025 Jun 
+9;26(12):5514. doi:10.3390/ijms26125514. 
+25. Wang Y , Chen HJ, Cheng Y , Xie Y , Cheng Y , Zhao S, et al. Multimodal integration of plasma 
+biomarkers, MRI, and genetic risk to predict cerebral amyloid burden in Alzheimer's disease. 
+Neuroimage. 2025 Nov 15;322:121550. doi:10.1016/j.neuroimage.2025.121550. 
+26. Ashton NJ, Brum WS, Di Molfetta G, Benedet AL, Arslan B, Jonaitis E, et al. Diagnostic Accuracy of 
+a Plasma Phosphorylated Tau 217 Immunoassay for Alzheimer Disease Pathology. JAMA Neurol. 
+2024 Mar 1;81(3):255-263. doi:10.1001/jamaneurol.2023.5319. 
+27. Sperling RA, Donohue MC, Rissman RA, Johnson KA, Rentz DM, Grill JD, et al. Amyloid and Tau 
+Prediction of Cognitive and Functional Decline in Unimpaired Older Individuals: Longitudinal Data 
+from the A4 and LEARN Studies. J Prev Alzheimers Dis. 2024;11(4):802-813. 
+doi:10.14283/jpad.2024.122. 
+28. Cogswell PM, Wiste HJ, Therneau TM, Griswold ME, Mattsson-Carlgren N, Palmqvist S, et al. 
+Association of plasma Alzheimer's disease biomarkers with cognitive decline in cognitively 
+unimpaired individuals. Alzheimers Dement. 2025 Sep;21(9):e70625. doi:10.1002/alz.70625. 
+29. Janelidze S, Barthélemy NR, Salvadó G, Schindler SE, Palmqvist S, Mattsson-Carlgren N, et al. 
+Plasma Phosphorylated Tau 217 and Aβ42/40 to Predict Early Brain Aβ Accumulation in People 
+Without Cognitive Impairment. JAMA Neurol. 2024 Sep 1;81(9):947-957. 
+doi:10.1001/jamaneurol.2024.2619. 
+30. Niimi Y , Janelidze S, Sato K, et al. Combining plasma Aβ and p-tau217 improves detection of brain 
+amyloid in non-demented elderly. Alzheimers Res Ther. 2024 May 23;16(1):115. 
+doi:10.1186/s13195-024-01469-w. 
+
+===== PAGE 14 =====
+31. Aschenbrenner AJ, Li Y , Henson RL, Volluz K, Hassenstab J, Verghese P , et al. Comparison of 
+plasma and CSF biomarkers in predicting cognitive decline. Ann Clin Transl Neurol. 2022 
+Nov;9(11):1739-1751. doi:10.1002/acn3.51670. 
+32. Jack CR Jr, Wiste HJ, Algeciras-Schimnich A, Weigand SD, Figdore DJ, Lowe VJ, et al. Comparison 
+of plasma biomarkers and amyloid PET for predicting memory decline in cognitively unimpaired 
+individuals. Alzheimers Dement. 2024 Mar;20(3):2143-2154. doi:10.1002/alz.13651. 
+33. Mendes AJ, Ribaldi F , Lathuiliere A, Ashton NJ, Zetterberg H, Abramowicz M, et al. Comparison of 
+plasma and neuroimaging biomarkers to predict cognitive decline in non-demented memory 
+clinic patients. Alzheimers Res Ther. 2024 May 16;16(1):110. doi:10.1186/s13195-024-01478-9. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+===== PAGE 15 =====
+Figures 
+ 
+
+
+===== PAGE 16 =====
+
+
+===== PAGE 17 =====
+ 
+
+
+===== PAGE 18 =====
+ 
+
+
+===== PAGE 19 =====
+ 
+
